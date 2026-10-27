@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Design Tokens as CSS Variables */
+  --color-primary-blue: #2563EB;
+  --color-primary-blue-hover: #1D4ED8;
+  --color-primary-blue-subtle: #EFF6FF;
+  --color-deep-navy: #172554;
+  --color-page-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-body-text: #334155;
+  --color-secondary-text: #64748B;
+  --color-border: #E2E8F0;
+  --color-success: #16A34A;
+  --color-error: #DC2626;
+
+  --max-content-width: 1200px;
+  --card-border-radius: 16px;
+  --card-padding-desktop: 24px;
+  --card-padding-mobile: 20px;
+  --transition-speed: 150ms;
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--color-page-bg);
+    color: var(--color-body-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Clear, accessible keyboard focus rings */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-blue);
+    outline-offset: 2px;
+  }
+
+  /* Respect reduced-motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
