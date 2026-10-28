@@ -230,6 +230,79 @@ describe('testSetLoader', () => {
         expect(result.error.code).toBe('SCHEMA_VERSION_MISMATCH');
       }
     });
+
+    it('loads and normalizes a Set 02 question set format successfully', async () => {
+      const manifestWithSet02 = {
+        version: 1,
+        testSets: [
+          {
+            id: 'bpsc-tre-set02-social-science',
+            title: 'BPSC TRE Set 02 – Social Science',
+            description: 'Set 02 description',
+            file: 'data/test-sets/set2.json',
+            status: 'published',
+          },
+        ],
+      };
+
+      const rawSet02 = {
+        social_science_set_02: {
+          itihas: [
+            {
+              question_number: 71,
+              question: 'नानाघाट?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D', E: 'E' },
+              answer: 'B',
+            },
+          ],
+          bhugol: [
+            {
+              question_number: 71,
+              question: 'बंदरगाह?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D', E: 'E' },
+              answer: 'C',
+            },
+          ],
+          rajvyavastha: [
+            {
+              question_number: 111,
+              question: 'वित्त आयोग?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D', E: 'E' },
+              answer: 'B',
+            },
+          ],
+          arthashastra: [
+            {
+              question_number: 111,
+              question: 'अर्थव्यवस्था?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D', E: 'E' },
+              answer: 'A',
+            },
+          ],
+        },
+      };
+
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => manifestWithSet02,
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => rawSet02,
+        } as Response);
+
+      const result = await loadQuestionSet('bpsc-tre-set02-social-science');
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.id).toBe('bpsc-tre-set02-social-science');
+        expect(result.data.title).toBe('BPSC TRE Set 02 – Social Science');
+        expect(result.data.subjects).toHaveLength(4);
+        expect(result.data.questions).toHaveLength(4);
+      }
+    });
   });
 });
 

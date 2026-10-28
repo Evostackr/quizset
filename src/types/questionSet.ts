@@ -19,6 +19,8 @@ export interface TestSetManifestEntry {
   file: string;
   status: TestSetPublicationStatus;
   icon?: string;
+  totalQuestions?: number;
+  subjectCounts?: Record<string, number>;
 }
 
 /**
@@ -101,6 +103,19 @@ export interface RawBpscTestSet {
   set: string;
   part?: string;
   subjects: RawBpscSubject[];
+}
+
+/**
+ * Raw BPSC TRE Set 02 Test Set file structure
+ */
+export interface RawBpscTestSet02 {
+  social_science_set_02: {
+    itihas?: RawBpscQuestion[];
+    bhugol?: RawBpscQuestion[];
+    rajvyavastha?: RawBpscQuestion[];
+    arthashastra?: RawBpscQuestion[];
+    [subjectKey: string]: RawBpscQuestion[] | undefined;
+  };
 }
 
 /**

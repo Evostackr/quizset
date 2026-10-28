@@ -7,7 +7,29 @@
       "description": "BPSC TRE Middle School Teachers (Class 6 to 8) - Social Science. 160 questions across History, Geography, Polity, and Economics.",
       "file": "data/test-sets/quizset_bpsc_tre_set01_social_science.json",
       "status": "published",
-      "icon": "book-open"
+      "icon": "book-open",
+      "totalQuestions": 160,
+      "subjectCounts": {
+        "history": 40,
+        "geography": 40,
+        "polity": 40,
+        "economics": 40
+      }
+    },
+    {
+      "id": "bpsc-tre-set02-social-science",
+      "title": "BPSC TRE Set 02 – Social Science",
+      "description": "BPSC TRE Middle School Teachers (Class 6 to 8) - Social Science. 160 questions across History, Geography, Polity, and Economics.",
+      "file": "data/test-sets/set2.json",
+      "status": "published",
+      "icon": "layers",
+      "totalQuestions": 160,
+      "subjectCounts": {
+        "history": 40,
+        "geography": 40,
+        "polity": 40,
+        "economics": 40
+      }
     }
   ]
 }

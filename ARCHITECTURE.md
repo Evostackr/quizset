@@ -111,7 +111,19 @@ The catalogue maintains a registry of all available test sets:
       "description": "BPSC TRE Middle School Teachers (Class 6 to 8) - Social Science. 160 questions across History, Geography, Polity, and Economics.",
       "file": "data/test-sets/quizset_bpsc_tre_set01_social_science.json",
       "status": "published",
-      "icon": "book-open"
+      "icon": "book-open",
+      "totalQuestions": 160,
+      "subjectCounts": { "history": 40, "geography": 40, "polity": 40, "economics": 40 }
+    },
+    {
+      "id": "bpsc-tre-set02-social-science",
+      "title": "BPSC TRE Set 02 – Social Science",
+      "description": "BPSC TRE Middle School Teachers (Class 6 to 8) - Social Science. 160 questions across History, Geography, Polity, and Economics.",
+      "file": "data/test-sets/set2.json",
+      "status": "published",
+      "icon": "layers",
+      "totalQuestions": 160,
+      "subjectCounts": { "history": 40, "geography": 40, "polity": 40, "economics": 40 }
     }
   ]
 }
@@ -258,8 +270,8 @@ All filtering and subject discovery logic is isolated into pure, testable functi
 
 ### 8. Automated Test Suite
 
-QuizSet includes 44 automated unit tests built on **Vitest**:
-- `tests/questionValidator.test.ts`: Verifies structural integrity, schema version enforcement, option counting, out-of-range keys, duplicate IDs, and path traversal security.
+QuizSet includes 50 automated unit tests built on **Vitest**:
+- `tests/questionValidator.test.ts`: Verifies structural integrity, schema version enforcement, option counting, out-of-range keys, duplicate IDs, path traversal security, and normalizes both BPSC TRE Set 01 (array) and Set 02 (map) formats.
 - `tests/subjectMapper.test.ts`: Tests single subject filtering, multiple subject combination, Mix Questions aggregation, zero-question subject exclusion, and cross-set isolation.
 - `tests/testSetLoader.test.ts`: Tests manifest loading, draft filtering, 404 handling, malformed JSON recovery, and ID mismatch detection.
 

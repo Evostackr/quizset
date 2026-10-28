@@ -376,6 +376,232 @@ function validateAndNormalizeBpsc(
 }
 
 /**
+ * Validates and normalizes a BPSC TRE Set 02 format question set.
+ * 
+ * Set 02 Structure:
+ * {
+ *   "social_science_set_02": {
+ *     "itihas": [ ... ],
+ *     "bhugol": [ ... ],
+ *     "rajvyavastha": [ ... ],
+ *     "arthashastra": [ ... ]
+ *   }
+ * }
+ */
+function validateAndNormalizeBpscSet02(
+  candidate: Record<string, unknown>,
+  expectedSetId?: string,
+  fallbackMeta?: FallbackSetMetadata,
+): ValidationResult<QuestionSet> {
+  const issues: ValidationIssue[] = [];
+  const root = candidate.social_science_set_02 as Record<string, unknown>;
+
+  if (typeof root !== 'object' || root === null || Array.isArray(root)) {
+    return {
+      success: false,
+      errors: [
+        {
+          path: 'social_science_set_02',
+          message: 'Property "social_science_set_02" must be an object containing subject question arrays',
+        },
+      ],
+    };
+  }
+
+  const subjects: Subject[] = [];
+  const questions: Question[] = [];
+  const seenQuestionIds = new Set<string>();
+
+  const subjectConfigs: Array<{
+    key: string;
+    aliases: string[];
+    canonicalId: string;
+    canonicalName: string;
+  }> = [
+    {
+      key: 'itihas',
+      aliases: ['history', 'इतिहास'],
+      canonicalId: 'history',
+      canonicalName: 'History',
+    },
+    {
+      key: 'bhugol',
+      aliases: ['geography', 'भूगोल'],
+      canonicalId: 'geography',
+      canonicalName: 'Geography',
+    },
+    {
+      key: 'rajvyavastha',
+      aliases: ['polity', 'राज्यव्यवस्था', 'rajvyavastha'],
+      canonicalId: 'polity',
+      canonicalName: 'Polity',
+    },
+    {
+      key: 'arthashastra',
+      aliases: ['economics', 'अर्थशास्त्र', 'अर्थव्यवस्था', 'arthashastra'],
+      canonicalId: 'economics',
+      canonicalName: 'Economics',
+    },
+  ];
+
+  // Process configured subjects in canonical order
+  for (const config of subjectConfigs) {
+    let matchingKey: string | undefined;
+    if (config.key in root) {
+      matchingKey = config.key;
+    } else {
+      matchingKey = Object.keys(root).find((k) =>
+        config.aliases.some((alias) => k.toLowerCase().includes(alias.toLowerCase())),
+      );
+    }
+
+    if (!matchingKey) {
+      issues.push({
+        path: `social_science_set_02.${config.key}`,
+        message: `Missing required subject "${config.canonicalName}" (${config.key}) in Set 02`,
+      });
+      continue;
+    }
+
+    const rawQuestions = root[matchingKey];
+    if (!Array.isArray(rawQuestions)) {
+      issues.push({
+        path: `social_science_set_02.${matchingKey}`,
+        message: `Subject "${matchingKey}" must contain an array of questions`,
+      });
+      continue;
+    }
+
+    subjects.push({
+      id: config.canonicalId,
+      name: config.canonicalName,
+    });
+
+    rawQuestions.forEach((qRaw, qIndex) => {
+      const qPath = `social_science_set_02.${matchingKey}[${qIndex}]`;
+      if (typeof qRaw !== 'object' || qRaw === null) {
+        issues.push({ path: qPath, message: 'Question must be an object' });
+        return;
+      }
+
+      const q = qRaw as Record<string, unknown>;
+      const qNum = typeof q.question_number === 'number' ? q.question_number : qIndex + 1;
+      const questionId = `${config.canonicalId}-${qNum}`;
+
+      if (seenQuestionIds.has(questionId)) {
+        issues.push({
+          path: `${qPath}.question_number`,
+          questionId,
+          message: `Duplicate question ID: "${questionId}"`,
+        });
+      }
+      seenQuestionIds.add(questionId);
+
+      // Question text
+      if (typeof q.question !== 'string' || q.question.trim() === '') {
+        issues.push({
+          path: `${qPath}.question`,
+          questionId,
+          message: `Question text for Q${qNum} cannot be empty`,
+        });
+      }
+
+      // Options
+      const optionsArr: string[] = [];
+      const optionsMap: Record<string, string> = {};
+
+      if (typeof q.options === 'object' && q.options !== null && !Array.isArray(q.options)) {
+        const optObj = q.options as Record<string, unknown>;
+        const keys = ['A', 'B', 'C', 'D', 'E'];
+        keys.forEach((key) => {
+          const val = optObj[key];
+          if (typeof val !== 'string' || val.trim() === '') {
+            issues.push({
+              path: `${qPath}.options.${key}`,
+              questionId,
+              message: `Option ${key} in Q${qNum} is empty or missing`,
+            });
+          } else {
+            optionsArr.push(val);
+            optionsMap[key] = val;
+          }
+        });
+      } else if (Array.isArray(q.options)) {
+        q.options.forEach((opt, optIdx) => {
+          if (typeof opt !== 'string' || opt.trim() === '') {
+            issues.push({
+              path: `${qPath}.options[${optIdx}]`,
+              questionId,
+              message: `Option ${optIdx + 1} in Q${qNum} is empty`,
+            });
+          } else {
+            optionsArr.push(opt);
+          }
+        });
+      } else {
+        issues.push({
+          path: `${qPath}.options`,
+          questionId,
+          message: `Options for Q${qNum} must be an object or array`,
+        });
+      }
+
+      // Answer index
+      const answerLetter = typeof q.answer === 'string' ? q.answer.trim().toUpperCase() : '';
+      const letterToIndex: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+
+      let correctIndex = -1;
+      if (answerLetter in letterToIndex) {
+        correctIndex = letterToIndex[answerLetter];
+      } else if (typeof q.correctAnswer === 'number' && Number.isInteger(q.correctAnswer)) {
+        correctIndex = q.correctAnswer;
+      }
+
+      if (correctIndex < 0 || correctIndex >= optionsArr.length) {
+        issues.push({
+          path: `${qPath}.answer`,
+          questionId,
+          message: `Invalid answer "${String(q.answer)}" for Q${qNum}`,
+        });
+      }
+
+      questions.push({
+        id: questionId,
+        subjectId: config.canonicalId,
+        question: typeof q.question === 'string' ? q.question : '',
+        options: optionsArr,
+        optionsMap,
+        correctAnswer: correctIndex,
+        originalAnswer: answerLetter,
+        answerStatus: 'verified',
+        questionNumber: qNum,
+        source: {
+          page: qNum,
+          questionNumber: qNum,
+        },
+      });
+    });
+  }
+
+  if (issues.length > 0) {
+    return { success: false, errors: issues };
+  }
+
+  const normalizedSet: QuestionSet = {
+    schemaVersion: 1,
+    id: expectedSetId || 'bpsc-tre-set02-social-science',
+    title: fallbackMeta?.title || 'BPSC TRE Set 02 – Social Science',
+    description:
+      fallbackMeta?.description ||
+      'BPSC TRE Middle School Teachers (Class 6 to 8) - Social Science. 160 questions across History, Geography, Polity, and Economics.',
+    subjects,
+    questions,
+  };
+
+  return { success: true, data: normalizedSet };
+}
+
+/**
  * Validates an individual QuestionSet JSON structure.
  * Supports both QuizSet Schema v1 and raw BPSC examination format.
  * 
@@ -408,6 +634,16 @@ export function validateQuestionSet(
 
   if (isBpsc) {
     return validateAndNormalizeBpsc(candidate, expectedSetId, fallbackMeta);
+  }
+
+  // Check if raw input is in BPSC TRE Set 02 format
+  const isBpscSet02 =
+    typeof candidate.social_science_set_02 === 'object' &&
+    candidate.social_science_set_02 !== null &&
+    !Array.isArray(candidate.social_science_set_02);
+
+  if (isBpscSet02) {
+    return validateAndNormalizeBpscSet02(candidate, expectedSetId, fallbackMeta);
   }
 
   // Schema v1 validation

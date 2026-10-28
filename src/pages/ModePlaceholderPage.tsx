@@ -306,7 +306,7 @@ export const ModePlaceholderPage: React.FC = () => {
                       onClick={handleStartQuiz}
                       className="w-full sm:w-auto inline-flex items-center gap-2 px-8 min-h-[48px]"
                     >
-                      <span>Start Mix Questions Quiz (160 Questions)</span>
+                      <span>Start Mix Questions Quiz ({questionSet.questions.length} Questions)</span>
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </div>

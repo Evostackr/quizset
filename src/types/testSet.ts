@@ -13,6 +13,8 @@ export interface TestSet {
   icon?: TestSetIconType;
   file?: string;
   status?: 'published' | 'draft';
+  totalQuestions?: number;
+  subjectCounts?: Record<string, number>;
 }
 
 /**

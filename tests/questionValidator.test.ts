@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import { validateQuestionSet, validateManifest } from '../src/data/questionValidator';
 import { mockValidQuestionSet, mockValidManifest } from './fixtures';
 
@@ -217,6 +219,78 @@ describe('questionValidator - validateQuestionSet', () => {
       expect(result.data.questions[0].options).toHaveLength(5);
     }
   });
+
+  it('successfully validates and normalizes BPSC TRE Set 02 format', () => {
+    const rawSet02Mock = {
+      social_science_set_02: {
+        itihas: [
+          {
+            question_number: 71,
+            question: 'नानाघाट अभिलेख?',
+            options: { A: 'सातवाहन', B: 'गुप्त', C: 'मौर्य', D: 'एक से अधिक', E: 'कोई नहीं' },
+            answer: 'B',
+          },
+        ],
+        bhugol: [
+          {
+            question_number: 71,
+            question: 'गुजरात बंदरगाह?',
+            options: { A: 'पनंबूर', B: 'हजीरा', C: 'पारादीप', D: 'एक से अधिक', E: 'कोई नहीं' },
+            answer: 'B',
+          },
+        ],
+        rajvyavastha: [
+          {
+            question_number: 111,
+            question: 'पंचायतों की वित्तीय स्थिति?',
+            options: { A: 'सलाहकार समिति', B: 'वित्त आयोग', C: 'वित्त समिति', D: 'एक से अधिक', E: 'कोई नहीं' },
+            answer: 'B',
+          },
+        ],
+        arthashastra: [
+          {
+            question_number: 111,
+            question: 'समान वितरण?',
+            options: { A: 'समाजवादी', B: 'पूँजीवादी', C: 'मिश्रित', D: 'एक से अधिक', E: 'कोई नहीं' },
+            answer: 'A',
+          },
+        ],
+      },
+    };
+
+    const result = validateQuestionSet(rawSet02Mock, 'bpsc-tre-set02-social-science');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe('bpsc-tre-set02-social-science');
+      expect(result.data.subjects).toHaveLength(4);
+      expect(result.data.subjects.map((s) => s.id)).toEqual(['history', 'geography', 'polity', 'economics']);
+      expect(result.data.questions).toHaveLength(4);
+      expect(result.data.questions[0].correctAnswer).toBe(1); // 'B' -> index 1
+      expect(result.data.questions[3].correctAnswer).toBe(0); // 'A' -> index 0
+    }
+  });
+
+  it('rejects Set 02 format when a subject has invalid answers', () => {
+    const invalidSet02 = {
+      social_science_set_02: {
+        itihas: [
+          {
+            question_number: 71,
+            question: 'Invalid answer question?',
+            options: { A: 'A', B: 'B', C: 'C', D: 'D', E: 'E' },
+            answer: 'Z', // Invalid answer
+          },
+        ],
+        bhugol: [],
+        rajvyavastha: [],
+        arthashastra: [],
+      },
+    };
+
+    const result = validateQuestionSet(invalidSet02, 'bpsc-tre-set02-social-science');
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((e) => e.message.includes('Invalid answer'))).toBe(true);
+  });
 });
 
 describe('questionValidator - validateManifest', () => {
@@ -339,6 +413,54 @@ describe('questionValidator - validateManifest', () => {
     const result = validateManifest(invalid);
     expect(result.success).toBe(false);
     expect(result.errors?.some((e) => e.field === 'file')).toBe(true);
+  });
+
+  it('validates the production public/data/test-sets.json catalogue manifest', () => {
+    const manifestPath = path.resolve(__dirname, '../public/data/test-sets.json');
+    const rawContent = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const result = validateManifest(rawContent);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.testSets).toHaveLength(2);
+      expect(result.data.testSets[0].id).toBe('bpsc-tre-set01-social-science');
+      expect(result.data.testSets[1].id).toBe('bpsc-tre-set02-social-science');
+      expect(result.data.testSets[1].file).toBe('data/test-sets/set2.json');
+    }
+  });
+
+  it('validates the production Set 02 file (set2.json) with exactly 160 questions', () => {
+    const set2Path = path.resolve(__dirname, '../public/data/test-sets/set2.json');
+    const rawContent = JSON.parse(fs.readFileSync(set2Path, 'utf8'));
+    const result = validateQuestionSet(rawContent, 'bpsc-tre-set02-social-science', {
+      title: 'BPSC TRE Set 02 – Social Science',
+      description: 'BPSC TRE Middle School Teachers (Class 6 to 8) - Social Science. 160 questions across History, Geography, Polity, and Economics.',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe('bpsc-tre-set02-social-science');
+      expect(result.data.title).toBe('BPSC TRE Set 02 – Social Science');
+      expect(result.data.subjects).toHaveLength(4);
+      expect(result.data.questions).toHaveLength(160);
+
+      // Verify each subject has exactly 40 questions
+      const historyQuestions = result.data.questions.filter((q) => q.subjectId === 'history');
+      const geographyQuestions = result.data.questions.filter((q) => q.subjectId === 'geography');
+      const polityQuestions = result.data.questions.filter((q) => q.subjectId === 'polity');
+      const economicsQuestions = result.data.questions.filter((q) => q.subjectId === 'economics');
+
+      expect(historyQuestions).toHaveLength(40);
+      expect(geographyQuestions).toHaveLength(40);
+      expect(polityQuestions).toHaveLength(40);
+      expect(economicsQuestions).toHaveLength(40);
+
+      // Verify all questions have 5 options and verified answerStatus
+      result.data.questions.forEach((q) => {
+        expect(q.options).toHaveLength(5);
+        expect(q.answerStatus).toBe('verified');
+        expect(q.correctAnswer).toBeGreaterThanOrEqual(0);
+        expect(q.correctAnswer).toBeLessThan(5);
+      });
+    }
   });
 });
 
