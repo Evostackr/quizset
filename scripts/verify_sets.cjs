@@ -57,3 +57,4 @@ manifest.testSets.forEach((setEntry, i) => {
 });
 
 console.log('\nAll files in catalogue verified successfully!');
+
